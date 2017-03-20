@@ -106,11 +106,6 @@ public class Application extends Controller {
 
     public static void setupExperiment(@Required String username, @Required File trainFile, File testFile, @Required String type, @Required String mode, @Required int numMinutes, @Required int numInstances) throws Exception {
 
-        if(validation.hasErrors()) {
-            flash.error(validation.errors().toString());
-            flash.error("Oops, you must be sure to fill in all fields!");
-            experiment(username);
-        }
 
         InstanceList trainSet;
         InstanceList testSet;
@@ -123,21 +118,17 @@ public class Application extends Controller {
         // if a test set is supplied, use its annotations 
         // and allow the training corpus to be unlabeled
         if (testFile != null) {
-            Logger.info("Loading '%s' test set...", testFile);
             testSet = Util.readZipData(testFile, myPipe, null);
             dataAlphabet = testSet.getDataAlphabet();
             labelAlphabet = (LabelAlphabet) testSet.getTargetAlphabet();
-            Logger.info("Loading '%s' training set...", trainFile);
             trainSet = Util.readZipData(trainFile, myPipe, labelAlphabet);
         }
         // otherwise, assume all training data is labeled, 
         // sample 10% as a held-out test set
         else {
-            Logger.info("Loading '%s' data set...", trainFile);
             InstanceList ilist = Util.readZipData(trainFile, myPipe, null);
             dataAlphabet = ilist.getDataAlphabet();
             labelAlphabet = (LabelAlphabet) ilist.getTargetAlphabet();
-            Logger.info("Splitting train/set set automatically...");
             InstanceList[] split = ilist.split(new Random(27), new double[]{0.9,0.1});
             trainSet = split[0];
             testSet = split[1];
@@ -150,28 +141,8 @@ public class Application extends Controller {
             counts[li]++;
         }
         for (int li = 0; li < counts.length; li++)
-            Logger.info("Test label '%s': %s instances", labelAlphabet.lookupObject(li), counts[li]);
 
         // set up train/test splits and store them in the cache
-        Cache.set(session.getId()+"-testSet", testSet, "90mn");
-        Cache.set(session.getId()+"-unlabeledSet", trainSet, "90mn");
-        Cache.set(session.getId()+"-labeledSet", trainSet.cloneEmpty(), "90mn");
-
-        Cache.set(session.getId()+"-username", username, "90mn");
-        Cache.set(session.getId()+"-dataset", trainFile.getName(), "90mn");
-        Cache.set(session.getId()+"-type", type, "90mn");
-        Cache.set(session.getId()+"-mode", mode, "90mn");
-        Cache.set(session.getId()+"-numMinutes", numMinutes, "90mn");
-        Cache.set(session.getId()+"-numInstances", Math.min(numInstances, trainSet.size()), "90mn");
-        Cache.set(session.getId()+"-startTime", (System.currentTimeMillis()/1000), "90mn" );
-
-        Cache.set(session.getId()+"-explore", false, "90mn");
-
-        Logger.info("|featureSet|=%s", dataAlphabet.size());
-        Logger.info("|labelSet|=%s", labelAlphabet.size());
-        Logger.info("|trainSet|=%s", trainSet.size());
-        Logger.info("|testSet|=%s", testSet.size());
-        Logger.info("User: %s", username);
 
         clearResult();
         if (testFile != null)
